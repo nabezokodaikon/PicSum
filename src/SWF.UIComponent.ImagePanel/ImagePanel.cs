@@ -53,7 +53,8 @@ namespace SWF.UIComponent.ImagePanel
         private bool isShowThumbnailPanel = false;
 
         private SizeF imageScaleSize = SizeF.Empty;
-        private Bitmap image = null;
+        private Bitmap srcImage = null;
+        private Bitmap scaleImage = null;
         private Bitmap thumbnail = null;
 
         private int hMaximumScrollValue = 0;
@@ -76,12 +77,12 @@ namespace SWF.UIComponent.ImagePanel
         {
             get
             {
-                if (this.image == null)
+                if (this.srcImage == null)
                 {
                     throw new NullReferenceException("イメージが存在しません。");
                 }
 
-                return this.image.Size;
+                return this.srcImage.Size;
             }
         }
 
@@ -135,7 +136,7 @@ namespace SWF.UIComponent.ImagePanel
         {
             get
             {
-                return this.image != null;
+                return this.srcImage != null;
             }
         }
 
@@ -175,20 +176,20 @@ namespace SWF.UIComponent.ImagePanel
             ArgumentNullException.ThrowIfNull(img, nameof(img));
             ArgumentNullException.ThrowIfNull(thumb, nameof(thumb));
 
-            if (this.image != null)
+            if (this.srcImage != null)
             {
                 throw new InvalidOperationException("既にイメージが存在しています。");
             }
 
             this.IsError = false;
-            this.image = img;
+            this.srcImage = img;
             this.thumbnail = thumb;
         }
 
-        public void SetScale(float scale)
+        public async void SetScale(float scale)
         {
             const float ERROR_IMAGE_SCALE = 1.0f;
-            if (this.image == null)
+            if (this.srcImage == null)
             {
                 throw new NullReferenceException("イメージが存在しません。");
             }
@@ -196,15 +197,43 @@ namespace SWF.UIComponent.ImagePanel
             if (this.IsError)
             {
                 this.imageScaleSize = new SizeF(
-                    this.image.Width * ERROR_IMAGE_SCALE,
-                    this.image.Height * ERROR_IMAGE_SCALE);
+                    this.srcImage.Width * ERROR_IMAGE_SCALE,
+                    this.srcImage.Height * ERROR_IMAGE_SCALE);
             }
             else
             {
+                if (this.scaleImage != null)
+                {
+                    this.scaleImage.Dispose();
+                    this.scaleImage = null;
+                }
+
                 this.imageScaleSize = new SizeF(
-                    this.image.Width * scale,
-                    this.image.Height * scale);
+                    this.srcImage.Width * scale,
+                    this.srcImage.Height * scale);
             }
+
+            await System.Threading.Tasks.Task.Run(() => this.CreateScaleImgae());
+        }
+
+        private void CreateScaleImgae()
+        {
+            var sw = Stopwatch.StartNew();
+            var scaleImage = new Bitmap((int)this.imageScaleSize.Width, (int)this.imageScaleSize.Height);
+            using (var g = Graphics.FromImage(scaleImage))
+            {
+                g.InterpolationMode = InterpolationMode.Low;
+                g.SmoothingMode = SmoothingMode.HighSpeed;
+                g.DrawImage(this.srcImage,
+                    new Rectangle(0, 0, scaleImage.Width, scaleImage.Height),
+                    new Rectangle(0, 0, this.srcImage.Width, this.srcImage.Height),
+                    GraphicsUnit.Pixel);
+            }
+            sw.Stop();
+            Console.WriteLine($"CreateScaleImgae: {sw.ElapsedMilliseconds} ms");
+
+            this.scaleImage = scaleImage;
+            base.Invalidate();
         }
 
         public void SetError()
@@ -220,10 +249,16 @@ namespace SWF.UIComponent.ImagePanel
                 this.thumbnail = null;
             }
 
-            if (this.image != null)
+            if (this.srcImage != null)
             {
-                this.image.Dispose();
-                this.image = null;
+                this.srcImage.Dispose();
+                this.srcImage = null;
+            }
+
+            if (this.scaleImage != null)
+            {
+                this.scaleImage.Dispose();
+                this.scaleImage = null;
             }
 
             this.imageScaleSize = SizeF.Empty;
@@ -300,7 +335,7 @@ namespace SWF.UIComponent.ImagePanel
                         sf);
                 }
             }
-            else if (this.image != null)
+            else if (this.scaleImage != null)
             {
                 e.Graphics.SmoothingMode = this.GetSmoothingMode();
                 e.Graphics.InterpolationMode = this.GetInterpolationMode();
@@ -512,7 +547,7 @@ namespace SWF.UIComponent.ImagePanel
 
         private void SetDrawParameter()
         {
-            if (this.image != null)
+            if (this.srcImage != null)
             {
                 this.hMaximumScrollValue = Math.Max(0, (int)this.imageScaleSize.Width - this.Width);
                 this.vMaximumScrollValue = Math.Max(0, (int)this.imageScaleSize.Height - this.Height);
@@ -530,7 +565,7 @@ namespace SWF.UIComponent.ImagePanel
 
         private bool IsMousePointImage(int x, int y)
         {
-            if (this.image != null)
+            if (this.srcImage != null)
             {
                 var rect = this.GetImageDestRectangle();
                 var imgX = x - (int)rect.X;
@@ -603,8 +638,8 @@ namespace SWF.UIComponent.ImagePanel
         {
             var x = this.hScrollValue;
             var y = this.vScrollValue;
-            var w = this.image.Width - this.hMaximumScrollValue;
-            var h = this.image.Height - this.vMaximumScrollValue;
+            var w = this.scaleImage.Width - this.hMaximumScrollValue;
+            var h = this.scaleImage.Height - this.vMaximumScrollValue;
 
             return new RectangleF(x, y, w, h);
         }
@@ -661,7 +696,7 @@ namespace SWF.UIComponent.ImagePanel
 
         private void DrawImage(Graphics g)
         {
-            g.DrawImage(this.image, this.GetImageDestRectangle(), this.GetImageSrcRectangle(), GraphicsUnit.Pixel);
+            g.DrawImage(this.scaleImage, this.GetImageDestRectangle(), this.GetImageSrcRectangle(), GraphicsUnit.Pixel);
         }
 
         private void DrawThumbnailPanel(Graphics g)
