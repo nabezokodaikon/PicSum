@@ -4,6 +4,7 @@
     <OutputType>Library</OutputType>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UseWindowsForms>true</UseWindowsForms>
+	<UseWPF>true</UseWPF>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
     <Configurations>Debug;Release;Develop</Configurations>
   </PropertyGroup>
@@ -32,8 +33,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Update="ImagePanel.cs">
-      <SubType>Component</SubType>
-    </Compile>
+    <Compile Update="ImagePanel.cs" />
   </ItemGroup>
 </Project>

@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.Versioning;
 using System.Windows.Forms;
+using System.Windows.Interop;
 
 namespace SWF.UIComponent.ImagePanel
 {
@@ -29,7 +30,7 @@ namespace SWF.UIComponent.ImagePanel
     /// </summary>
     [SupportedOSPlatform("windows")]
     public sealed class ImagePanel
-        : Control
+        : System.Windows.Forms.Integration.ElementHost
     {
         #region 定数・列挙
 
@@ -67,6 +68,8 @@ namespace SWF.UIComponent.ImagePanel
         private Point moveFromPoint = Point.Empty;
 
         private readonly SolidBrush thumbnailFilterBrush = new(Color.FromArgb(128, 0, 0, 0));
+
+        private readonly System.Windows.Controls.Image wpfControl = new System.Windows.Controls.Image();
 
         #endregion
 
@@ -183,6 +186,12 @@ namespace SWF.UIComponent.ImagePanel
             this.IsError = false;
             this.image = img;
             this.thumbnail = thumb;
+    
+            this.wpfControl.Source = Imaging.CreateBitmapSourceFromHBitmap(
+            img.GetHbitmap(),
+            IntPtr.Zero,
+            System.Windows.Int32Rect.Empty,
+            System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
         }
 
         public void SetScale(float scale)
@@ -284,6 +293,8 @@ namespace SWF.UIComponent.ImagePanel
 
         protected override void OnPaint(PaintEventArgs e)
         {
+            base.OnPaint(e);
+            return;
             if (this.IsError)
             {
                 using (var sf = new StringFormat())
@@ -493,6 +504,8 @@ namespace SWF.UIComponent.ImagePanel
             this.UpdateStyles();
 
             this.Font = new Font(this.Font.FontFamily, this.Font.Size * 2);
+
+            this.Child = this.wpfControl;
         }
 
         private void OnImageMouseClick(MouseEventArgs e)
