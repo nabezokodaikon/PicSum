@@ -70,6 +70,14 @@ namespace SWF.UIComponent.FlowList
         // ドラッグフラグ
         private bool isDrag = false;
 
+        // スムーズスクロール
+        private Timer scrollTimer;
+        private int targetScrollPosition;
+        private float currentScrollPosition;
+        private int scrollDirection;
+        private float scrollSpeed;
+        private const float SCROLL_ACCELERATION = 0.1f;
+
         #region 描画オブジェクト
 
         private readonly Color itemTextColor = Color.FromArgb(
@@ -557,19 +565,30 @@ namespace SWF.UIComponent.FlowList
         {
             if (e.Delta != 0)
             {
-                int value = this.scrollBar.Value - (int)(this.itemHeight * 0.8 * (e.Delta / Math.Abs(e.Delta)));
+                this.scrollTimer.Stop();
+
+                this.scrollDirection = (e.Delta > 0) ? -1 : 1;
+                this.currentScrollPosition = this.scrollBar.Value;
+
+                var value = this.currentScrollPosition - (int)(this.itemHeight * 1f * (e.Delta / Math.Abs(e.Delta)));
                 if (value < this.scrollBar.Minimum)
                 {
-                    this.scrollBar.Value = this.scrollBar.Minimum;
+                    this.targetScrollPosition = this.scrollBar.Minimum;
                 }
                 else if (value > this.scrollBar.Maximum)
                 {
-                    this.scrollBar.Value = this.scrollBar.Maximum;
+                    this.targetScrollPosition = this.scrollBar.Maximum;
                 }
                 else
                 {
-                    this.scrollBar.Value = value;
+                    this.targetScrollPosition = (int)value;
                 }
+
+                // スクロール速度を初期化
+                this.scrollSpeed = 48f;
+
+                // タイマーをスタート
+                this.scrollTimer.Start();
             }
 
             base.OnMouseWheel(e);
@@ -589,6 +608,10 @@ namespace SWF.UIComponent.FlowList
                 true);
             this.UpdateStyles();
 
+            this.scrollTimer = new Timer();
+            this.scrollTimer.Interval = 15;
+            this.scrollTimer.Tick += this.ScrollTimer_Tick;
+
             this.scrollBar.Dock = DockStyle.Right;
             this.scrollBar.ValueChanged += new(this.ScrollBar_ValueChanged);
             this.selectedItemIndexs.Change += new(this.SelectedItemIndexs_Change);
@@ -602,7 +625,7 @@ namespace SWF.UIComponent.FlowList
 
             if (this.itemCount > 0)
             {
-                var width = (this.scrollBar.Visible) ? this.Width - this.scrollBar.Width: this.Width;
+                var width = (this.scrollBar.Visible) ? this.Width - this.scrollBar.Width : this.Width;
                 if (this.isLileList)
                 {
                     this.itemWidth = width;
@@ -1355,6 +1378,50 @@ namespace SWF.UIComponent.FlowList
         #endregion
 
         #region スクロールバーイベント
+
+        private void ScrollTimer_Tick(object sender, EventArgs e)
+        {
+            Console.WriteLine(this.currentScrollPosition);
+            Console.WriteLine(this.targetScrollPosition);
+
+            if (this.scrollDirection > 0)
+            {
+                if (this.currentScrollPosition >= this.targetScrollPosition)
+                {
+                    this.scrollTimer.Stop();
+                    return;
+                }
+            }
+            else
+            {
+                if (this.currentScrollPosition <= this.targetScrollPosition)
+                {
+                    this.scrollTimer.Stop();
+                    return;
+                }
+            }
+
+            // 現在のスクロール位置を更新
+            this.currentScrollPosition += this.scrollDirection * scrollSpeed;
+
+            // 加速を適用
+            this.scrollSpeed += SCROLL_ACCELERATION;
+
+            // スクロール位置の更新
+            var value = (int)Math.Round(this.currentScrollPosition);
+            if (value < this.scrollBar.Minimum)
+            {
+                this.scrollBar.Value = this.scrollBar.Minimum;
+            }
+            else if (value > this.scrollBar.Maximum)
+            {
+                this.scrollBar.Value = this.scrollBar.Maximum;
+            }
+            else
+            {
+                this.scrollBar.Value = value;
+            }
+        }
 
         private void ScrollBar_ValueChanged(object sender, EventArgs e)
         {
