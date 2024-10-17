@@ -30,28 +30,28 @@ namespace SWF.Core.ImageAccessor
             }
         }
 
-        public static Size GetSize(string filePath)
+        public static Size GetSize(string filePath, Action cancelCheckAction)
         {
             ArgumentException.ThrowIfNullOrEmpty(filePath, nameof(filePath));
 
-            return Read(filePath, cache => cache.Buffer.Size);
+            return Read(filePath, cache => cache.Buffer.Size, cancelCheckAction);
         }
 
-        public static Bitmap GetBitmap(string filePath)
+        public static Bitmap GetBitmap(string filePath, Action cancelCheckAction)
         {
             ArgumentException.ThrowIfNullOrEmpty(filePath, nameof(filePath));
 
-            return Read(filePath, cache => cache.Buffer.ToBitmap());
+            return Read(filePath, cache => cache.Buffer.ToBitmap(), cancelCheckAction);
         }
 
-        public static CvImage GetCvImage(string filePath)
+        public static CvImage GetCvImage(string filePath, Action cancelCheckAction)
         {
             ArgumentException.ThrowIfNullOrEmpty(filePath, nameof(filePath));
 
-            return Read(filePath, cache => new CvImage(cache.Buffer.ToBitmap()));
+            return Read(filePath, cache => new CvImage(cache.Buffer.ToBitmap()), cancelCheckAction);
         }
 
-        public static void Create(string filePath)
+        public static void Create(string filePath, Action cancelCheckAction)
         {
             ArgumentException.ThrowIfNullOrEmpty(filePath, nameof(filePath));
 
@@ -86,7 +86,7 @@ namespace SWF.Core.ImageAccessor
                         CACHE_DICTIONARY.Remove(removeCache.FilePath);
                     }
 
-                    var buffer = ImageUtil.ReadImageFileBuffer(filePath);
+                    var buffer = ImageUtil.ReadImageFileBuffer(filePath, cancelCheckAction);
                     ImageFileSizeCacheUtil.Set(filePath, buffer.Size);
                     var newCache = new ImageFileCache(filePath, buffer, timestamp);
                     CACHE_DICTIONARY.Add(newCache.FilePath, newCache);
@@ -106,7 +106,7 @@ namespace SWF.Core.ImageAccessor
             }
         }
 
-        private static T Read<T>(string filePath, Func<ImageFileCache, T> resultFunc)
+        private static T Read<T>(string filePath, Func<ImageFileCache, T> resultFunc, Action cancelCheckAction)
         {
             ArgumentException.ThrowIfNullOrEmpty(filePath, nameof(filePath));
 
@@ -141,7 +141,7 @@ namespace SWF.Core.ImageAccessor
                         CACHE_DICTIONARY.Remove(removeCache.FilePath);
                     }
 
-                    var buffer = ImageUtil.ReadImageFileBuffer(filePath);
+                    var buffer = ImageUtil.ReadImageFileBuffer(filePath, cancelCheckAction);
                     ImageFileSizeCacheUtil.Set(filePath, buffer.Size);
                     var newCache = new ImageFileCache(filePath, buffer, timestamp);
                     CACHE_DICTIONARY.Add(filePath, newCache);

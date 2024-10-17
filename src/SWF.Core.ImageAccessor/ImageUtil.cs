@@ -211,13 +211,14 @@ namespace SWF.Core.ImageAccessor
             }
         }
 
-        internal static ImageFileBuffer ReadImageFileBuffer(string filePath)
+        internal static ImageFileBuffer ReadImageFileBuffer(string filePath, Action cancelCheckAction)
         {
             ArgumentException.ThrowIfNullOrEmpty(filePath, nameof(filePath));
+            ArgumentNullException.ThrowIfNull(cancelCheckAction, nameof(cancelCheckAction));
 
             try
             {
-                using (var bmp = ReadImageFile(filePath))
+                using (var bmp = ReadImageFile(filePath, cancelCheckAction))
                 {
                     return new ImageFileBuffer(bmp);
                 }
@@ -403,9 +404,10 @@ namespace SWF.Core.ImageAccessor
             }
         }
 
-        public static Bitmap ReadImageFile(string filePath)
+        public static Bitmap ReadImageFile(string filePath, Action cancelCheckAction)
         {
             ArgumentException.ThrowIfNullOrEmpty(filePath, nameof(filePath));
+            ArgumentNullException.ThrowIfNull(cancelCheckAction, nameof(cancelCheckAction));
 
             try
             {
@@ -421,8 +423,7 @@ namespace SWF.Core.ImageAccessor
                 }
 
                 sw = Stopwatch.StartNew();
-                using (var fs = new FileStream(filePath,
-                    FileMode.Open, FileAccess.Read, FileShare.Read, FILE_READ_BUFFER_SIZE, FileOptions.SequentialScan))
+                using (var fs = new CancelableFileStream(filePath, cancelCheckAction))
                 {
                     sw.Stop();
                     Console.WriteLine($"[{Thread.CurrentThread.Name}] ImageUtil.ReadImageFile new FileStream: {sw.ElapsedMilliseconds} ms");

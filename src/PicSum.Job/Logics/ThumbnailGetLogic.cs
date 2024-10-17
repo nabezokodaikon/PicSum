@@ -109,7 +109,7 @@ namespace PicSum.Job.Logics
             }
             else
             {
-                var cache = this.GetOrCreateDirectoryCache(filePath, thumbWidth, thumbHeight);
+                var cache = this.GetOrCreateDirectoryCache(filePath, thumbWidth, thumbHeight, this.CheckCancel);
                 if (cache != ThumbnailBufferEntity.EMPTY)
                 {
                     if (cache.ThumbnailWidth > thumbWidth || cache.ThumbnailHeight > thumbHeight)
@@ -244,7 +244,7 @@ namespace PicSum.Job.Logics
                         else
                         {
                             // サムネイルを更新します。
-                            var thumb = this.UpdateDBFileCache(filePath, thumbWidth, thumbHeight, updateDate);
+                            var thumb = this.UpdateDBFileCache(filePath, thumbWidth, thumbHeight, updateDate, this.CheckCancel);
                             UpdateMemoryCache(thumb);
                             return thumb;
                         }
@@ -252,7 +252,7 @@ namespace PicSum.Job.Logics
                     else
                     {
                         // サムネイルを作成します。
-                        var thumb = this.CreateDBFileCache(filePath, thumbWidth, thumbHeight, updateDate);
+                        var thumb = this.CreateDBFileCache(filePath, thumbWidth, thumbHeight, updateDate, this.CheckCancel);
                         UpdateMemoryCache(thumb);
                         return thumb;
                     }
@@ -276,7 +276,7 @@ namespace PicSum.Job.Logics
                     else
                     {
                         // サムネイルを更新します。
-                        var thumb = this.UpdateDBFileCache(filePath, thumbWidth, thumbHeight, updateDate);
+                        var thumb = this.UpdateDBFileCache(filePath, thumbWidth, thumbHeight, updateDate, this.CheckCancel);
                         UpdateMemoryCache(thumb);
                         return thumb;
                     }
@@ -285,14 +285,14 @@ namespace PicSum.Job.Logics
                 {
                     // サムネイルを作成します。
                     var updateDate = FileUtil.GetUpdateDate(filePath);
-                    var thumb = this.CreateDBFileCache(filePath, thumbWidth, thumbHeight, updateDate);
+                    var thumb = this.CreateDBFileCache(filePath, thumbWidth, thumbHeight, updateDate, this.CheckCancel);
                     UpdateMemoryCache(thumb);
                     return thumb;
                 }
             }
         }
 
-        private ThumbnailBufferEntity GetOrCreateDirectoryCache(string filePath, int thumbWidth, int thumbHeight)
+        private ThumbnailBufferEntity GetOrCreateDirectoryCache(string filePath, int thumbWidth, int thumbHeight, Action cancelCheckAction)
         {
             var memCache = GetMemoryCache(filePath);
             if (memCache != ThumbnailBufferEntity.EMPTY)
@@ -325,7 +325,7 @@ namespace PicSum.Job.Logics
                             if (!string.IsNullOrEmpty(thumbFile))
                             {
                                 // サムネイルを更新します。
-                                var thumb = this.UpdateDBDirectoryCache(filePath, thumbFile, thumbWidth, thumbHeight, updateDate);
+                                var thumb = this.UpdateDBDirectoryCache(filePath, thumbFile, thumbWidth, thumbHeight, updateDate, cancelCheckAction);
                                 UpdateMemoryCache(thumb);
                                 return thumb;
                             }
@@ -341,7 +341,7 @@ namespace PicSum.Job.Logics
                         if (!string.IsNullOrEmpty(thumbFile))
                         {
                             // サムネイルを作成します。
-                            var thumb = this.CreateDBDirectoryCache(filePath, thumbFile, thumbWidth, thumbHeight, updateDate);
+                            var thumb = this.CreateDBDirectoryCache(filePath, thumbFile, thumbWidth, thumbHeight, updateDate, cancelCheckAction);
                             UpdateMemoryCache(thumb);
                             return thumb;
                         }
@@ -373,7 +373,7 @@ namespace PicSum.Job.Logics
                         if (!string.IsNullOrEmpty(thumbFile))
                         {
                             // サムネイルを更新します。                                
-                            var thumb = this.UpdateDBDirectoryCache(filePath, thumbFile, thumbWidth, thumbHeight, updateDate);
+                            var thumb = this.UpdateDBDirectoryCache(filePath, thumbFile, thumbWidth, thumbHeight, updateDate, cancelCheckAction);
                             UpdateMemoryCache(thumb);
                             return thumb;
                         }
@@ -390,7 +390,7 @@ namespace PicSum.Job.Logics
                     if (!string.IsNullOrEmpty(thumbFile))
                     {
                         var updateDate = FileUtil.GetUpdateDate(filePath);
-                        var thumb = this.CreateDBDirectoryCache(filePath, thumbFile, thumbWidth, thumbHeight, updateDate);
+                        var thumb = this.CreateDBDirectoryCache(filePath, thumbFile, thumbWidth, thumbHeight, updateDate, cancelCheckAction);
                         UpdateMemoryCache(thumb);
                         return thumb;
                     }
@@ -484,9 +484,9 @@ namespace PicSum.Job.Logics
         }
 
         private ThumbnailBufferEntity CreateDBFileCache(
-            string filePath, int thumbWidth, int thumbHeight, DateTime fileUpdateDate)
+            string filePath, int thumbWidth, int thumbHeight, DateTime fileUpdateDate, Action cancelCheckAction)
         {
-            using (var srcImg = ImageUtil.ReadImageFile(filePath))
+            using (var srcImg = ImageUtil.ReadImageFile(filePath, cancelCheckAction))
             {
                 ImageFileSizeCacheUtil.Set(filePath, srcImg.Size);
                 using (var thumbImg = ThumbnailUtil.CreateThumbnail(srcImg, thumbWidth, thumbHeight))
@@ -515,9 +515,10 @@ namespace PicSum.Job.Logics
             }
         }
 
-        private ThumbnailBufferEntity UpdateDBFileCache(string filePath, int thumbWidth, int thumbHeight, DateTime fileUpdateDate)
+        private ThumbnailBufferEntity UpdateDBFileCache(
+            string filePath, int thumbWidth, int thumbHeight, DateTime fileUpdateDate, Action cancelCheckAction)
         {
-            using (var srcImg = ImageUtil.ReadImageFile(filePath))
+            using (var srcImg = ImageUtil.ReadImageFile(filePath, cancelCheckAction))
             {
                 ImageFileSizeCacheUtil.Set(filePath, srcImg.Size);
                 using (var thumbImg = ThumbnailUtil.CreateThumbnail(srcImg, thumbWidth, thumbHeight))
@@ -546,9 +547,10 @@ namespace PicSum.Job.Logics
             }
         }
 
-        private ThumbnailBufferEntity CreateDBDirectoryCache(string directoryPath, string thumbFilePath, int thumbWidth, int thumbHeight, DateTime directoryUpdateDate)
+        private ThumbnailBufferEntity CreateDBDirectoryCache(
+            string directoryPath, string thumbFilePath, int thumbWidth, int thumbHeight, DateTime directoryUpdateDate, Action cancelCheckAction)
         {
-            using (var srcImg = ImageUtil.ReadImageFile(thumbFilePath))
+            using (var srcImg = ImageUtil.ReadImageFile(thumbFilePath, cancelCheckAction))
             {
                 ImageFileSizeCacheUtil.Set(thumbFilePath, srcImg.Size);
                 using (var thumbImg = ThumbnailUtil.CreateThumbnail(srcImg, thumbWidth, thumbHeight))
@@ -576,9 +578,10 @@ namespace PicSum.Job.Logics
             }
         }
 
-        private ThumbnailBufferEntity UpdateDBDirectoryCache(string directoryPath, string thumbFilePath, int thumbWidth, int thumbHeight, DateTime directoryUpdateDate)
+        private ThumbnailBufferEntity UpdateDBDirectoryCache(
+            string directoryPath, string thumbFilePath, int thumbWidth, int thumbHeight, DateTime directoryUpdateDate, Action cancelCheckAction)
         {
-            using (var srcImg = ImageUtil.ReadImageFile(thumbFilePath))
+            using (var srcImg = ImageUtil.ReadImageFile(thumbFilePath, cancelCheckAction))
             {
                 ImageFileSizeCacheUtil.Set(thumbFilePath, srcImg.Size);
                 using (var thumbImg = ThumbnailUtil.CreateThumbnail(srcImg, thumbWidth, thumbHeight))
