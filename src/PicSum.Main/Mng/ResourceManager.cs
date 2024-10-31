@@ -3,6 +3,7 @@ using PicSum.Main.Conf;
 using PicSum.UIComponent.Contents.Conf;
 using System;
 using System.Runtime.Versioning;
+using System.Threading.Tasks;
 
 namespace PicSum.Main.Mng
 {
@@ -11,8 +12,10 @@ namespace PicSum.Main.Mng
     /// </summary>
     [SupportedOSPlatform("windows")]
     internal sealed partial class ResourceManager
-        : IDisposable
+        : IAsyncDisposable, IDisposable
     {
+        private bool disposed = false;
+
         /// <summary>
         /// コンストラクタ
         /// </summary>
@@ -37,30 +40,57 @@ namespace PicSum.Main.Mng
             ImageViewerPageConfig.ImageSizeMode = Config.Values.ImageSizeMode;
         }
 
+        ~ResourceManager()
+        {
+            this.Dispose(false);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            var closingJob = new ClosingSyncJob();
+            await closingJob.Execute();
+
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
         /// <summary>
         /// リソースを解放します。
         /// </summary>
         public void Dispose()
         {
-            var closingJob = new ClosingSyncJob();
-            closingJob.Execute();
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-            Config.Values.WindowState = BrowserConfig.WindowState;
-            Config.Values.WindowLocaion = BrowserConfig.WindowLocaion;
-            Config.Values.WindowSize = BrowserConfig.WindowSize;
+        private void Dispose(bool disposing)
+        {
+            if (this.disposed)
+            {
+                return;
+            }
 
-            Config.Values.ExportDirectoryPath = CommonConfig.ExportDirectoryPath;
+            if (disposing)
+            {
+                Config.Values.WindowState = BrowserConfig.WindowState;
+                Config.Values.WindowLocaion = BrowserConfig.WindowLocaion;
+                Config.Values.WindowSize = BrowserConfig.WindowSize;
 
-            Config.Values.ThumbnailSize = FileListPageConfig.ThumbnailSize;
-            Config.Values.IsShowFileName = FileListPageConfig.IsShowFileName;
-            Config.Values.IsShowDirectory = FileListPageConfig.IsShowDirectory;
-            Config.Values.IsShowImageFile = FileListPageConfig.IsShowImageFile;
-            Config.Values.IsShowOtherFile = FileListPageConfig.IsShowOtherFile;
+                Config.Values.ExportDirectoryPath = CommonConfig.ExportDirectoryPath;
 
-            Config.Values.ImageDisplayMode = ImageViewerPageConfig.ImageDisplayMode;
-            Config.Values.ImageSizeMode = ImageViewerPageConfig.ImageSizeMode;
+                Config.Values.ThumbnailSize = FileListPageConfig.ThumbnailSize;
+                Config.Values.IsShowFileName = FileListPageConfig.IsShowFileName;
+                Config.Values.IsShowDirectory = FileListPageConfig.IsShowDirectory;
+                Config.Values.IsShowImageFile = FileListPageConfig.IsShowImageFile;
+                Config.Values.IsShowOtherFile = FileListPageConfig.IsShowOtherFile;
 
-            Config.Values.Save();
+                Config.Values.ImageDisplayMode = ImageViewerPageConfig.ImageDisplayMode;
+                Config.Values.ImageSizeMode = ImageViewerPageConfig.ImageSizeMode;
+
+                Config.Values.Save();
+            }
+
+            this.disposed = true;
         }
     }
 }

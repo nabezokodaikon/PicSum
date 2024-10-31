@@ -43,11 +43,14 @@ namespace PicSum.Main
                     Application.EnableVisualStyles();
                     Application.SetCompatibleTextRenderingDefault(false);
 
-                    using (var resource = new ResourceManager())
+                    var resource = new ResourceManager();
+
                     using (var initialForm = new InitialForm())
                     {
                         Application.Run(initialForm);
                     }
+
+                    resource.DisposeAsync().GetAwaiter().GetResult();
 
                     logger.Debug("アプリケーションを終了します。");
                 }

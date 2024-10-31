@@ -5,7 +5,7 @@ using System.Diagnostics;
 namespace SWF.Core.Job
 {
     public partial class TwoWayJob<TJob, TJobParameter, TJobResult>
-        : IDisposable
+        : IAsyncDisposable, IDisposable
         where TJob : AbstractTwoWayJob<TJobParameter, TJobResult>, new()
         where TJobParameter : IJobParameter
         where TJobResult : IJobResult
@@ -33,6 +33,27 @@ namespace SWF.Core.Job
             this.Dispose(false);
         }
 
+        public async ValueTask DisposeAsync()
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            this.BeginCancel();
+
+            Logger.Debug("ジョブ実行スレッドにキャンセルリクエストを送ります。");
+            await this.source.CancelAsync();
+
+            Logger.Debug("UIスレッドを待機します。");
+            await this.thread;
+
+            Logger.Debug($"{this.threadName}: ジョブ実行スレッドが終了しました。");
+
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
         public void Dispose()
         {
             this.Dispose(true);
@@ -48,16 +69,6 @@ namespace SWF.Core.Job
 
             if (disposing)
             {
-                this.BeginCancel();
-
-                Logger.Debug("ジョブ実行スレッドにキャンセルリクエストを送ります。");
-                this.source.Cancel();
-
-                Logger.Debug("UIスレッドを待機します。");
-                this.thread.Wait();
-
-                Logger.Debug($"{this.threadName}: ジョブ実行スレッドが終了しました。");
-
                 this.source.Dispose();
                 this.thread.Dispose();
             }

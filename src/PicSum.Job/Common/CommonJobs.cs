@@ -9,7 +9,7 @@ namespace PicSum.Job.Common
 {
     [SupportedOSPlatform("windows")]
     public sealed partial class CommonJobs
-        : IDisposable
+        : IAsyncDisposable, IDisposable
     {
         public static CommonJobs Instance = new();
 
@@ -76,6 +76,43 @@ namespace PicSum.Job.Common
             this.Dispose(false);
         }
 
+        public async ValueTask DisposeAsync()
+        {
+            await this.ReleaseJob(this.addBookmarkJob);
+            await this.ReleaseJob(this.singleFileExportJob);
+            await this.ReleaseJob(this.directoryStateUpdateJob);
+            await this.ReleaseJob(this.directoryViewHistoryAddJob);
+            await this.ReleaseJob(this.bookmarkDeleteJob);
+            await this.ReleaseJob(this.directoryViewCounterDeleteJob);
+            await this.ReleaseJob(this.fileRatingUpdateJob);
+            await this.ReleaseJob(this.fileTagDeleteJob);
+            await this.ReleaseJob(this.fileTagAddJob);
+            await this.ReleaseJob(this.gcCollectRunJob);
+
+            await this.ReleaseJob(this.imageFileReadJob);
+            await this.ReleaseJob(this.imageFileLoadingJob);
+            await this.ReleaseJob(this.imageFileCacheJob);
+            await this.ReleaseJob(this.thumbnailsGetJob);
+            await this.ReleaseJob(this.subDirectoriesGetJob);
+            await this.ReleaseJob(this.directoryViewHistoryGetJob);
+            await this.ReleaseJob(this.addressInfoGetJob);
+            await this.ReleaseJob(this.tagsGetJob);
+            await this.ReleaseJob(this.fileDeepInfoGetJob);
+            await this.ReleaseJob(this.pipeServerJob);
+
+            await this.ReleaseJob(this.filesGetByDirectoryJob);
+            await this.ReleaseJob(this.favoriteDirectoriesGetJob);
+            await this.ReleaseJob(this.filesGetByRatingJob);
+            await this.ReleaseJob(this.filesGetByTagJob);
+            await this.ReleaseJob(this.imageFilesGetByDirectoryJob);
+            await this.ReleaseJob(this.nextDirectoryGetJob);
+            await this.ReleaseJob(this.multiFilesExportJob);
+            await this.ReleaseJob(this.bookmarksGetJob);
+
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
         public void Dispose()
         {
             this.Dispose(true);
@@ -91,39 +128,18 @@ namespace PicSum.Job.Common
 
             if (disposing)
             {
-                this.addBookmarkJob?.Dispose();
-                this.singleFileExportJob?.Dispose();
-                this.directoryStateUpdateJob?.Dispose();
-                this.directoryViewHistoryAddJob?.Dispose();
-                this.bookmarkDeleteJob?.Dispose();
-                this.directoryViewCounterDeleteJob?.Dispose();
-                this.fileRatingUpdateJob?.Dispose();
-                this.fileTagDeleteJob?.Dispose();
-                this.fileTagAddJob?.Dispose();
-                this.gcCollectRunJob?.Dispose();
 
-                this.imageFileReadJob?.Dispose();
-                this.imageFileLoadingJob?.Dispose();
-                this.imageFileCacheJob?.Dispose();
-                this.thumbnailsGetJob?.Dispose();
-                this.subDirectoriesGetJob?.Dispose();
-                this.directoryViewHistoryGetJob?.Dispose();
-                this.addressInfoGetJob?.Dispose();
-                this.tagsGetJob?.Dispose();
-                this.fileDeepInfoGetJob?.Dispose();
-                this.pipeServerJob?.Dispose();
-
-                this.filesGetByDirectoryJob?.Dispose();
-                this.favoriteDirectoriesGetJob?.Dispose();
-                this.filesGetByRatingJob?.Dispose();
-                this.filesGetByTagJob?.Dispose();
-                this.imageFilesGetByDirectoryJob?.Dispose();
-                this.nextDirectoryGetJob?.Dispose();
-                this.multiFilesExportJob?.Dispose();
-                this.bookmarksGetJob?.Dispose();
             }
 
             this.disposed = true;
+        }
+
+        private async Task ReleaseJob(IAsyncDisposable? job)
+        {
+            if (job != null)
+            {
+                await job.DisposeAsync();
+            }
         }
 
         public void StartBookmarkAddJob(ISender sender, ValueParameter<string> parameter)

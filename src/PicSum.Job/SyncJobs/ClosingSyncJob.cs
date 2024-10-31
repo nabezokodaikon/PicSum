@@ -9,10 +9,10 @@ namespace PicSum.Job.SyncJobs
     public sealed class ClosingSyncJob
         : AbstractSyncJob
     {
-        public void Execute()
+        public async Task Execute()
         {
             var logic = new ClosingSyncLogic();
-            logic.Execute();
+            await logic.Execute();
         }
     }
 }

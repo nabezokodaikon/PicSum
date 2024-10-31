@@ -14,9 +14,10 @@ namespace PicSum.Job.SyncLogics
     internal sealed class ClosingSyncLogic
         : AbstractSyncLogic
     {
-        public void Execute()
+        public async Task Execute()
         {
-            CommonJobs.Instance.Dispose();
+            await CommonJobs.Instance.DisposeAsync();
+
             UIThreadAccessor.Instance.Dispose();
             FileIconCash.DisposeStaticResources();
             ThumbnailGetLogic.DisposeStaticResouces();
